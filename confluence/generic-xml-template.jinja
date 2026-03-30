@@ -1,0 +1,44 @@
+{%- set str_from_bool = {True : 'true', False : 'false'} %}
+{%- set empty_element_closing_tag = true %}
+{%- set block_separator = '  ' %}
+{%- macro xml_block(element, depth = 0) %}
+ {%- if element is mapping %}
+  {%- set e = namespace() %}
+  {%- set e.attributes = [] -%}
+  {%- for key, value in element.items() %}
+   {%- if value is string %}
+    {%- do e.attributes.append(key + '="' + value + '"') %}
+   {%- elif value is boolean %}
+    {%- do e.attributes.append(key + '="' + str_from_bool[value] + '"') %}
+   {%- elif value is sequence %}
+    {%- set e.tagName = key %}
+    {%- set e.childs = value %}
+   {%- else %}
+<!--The value {{ value }} from the element {{ element }} is not supported  -->
+   {%- endif %}
+  {%- endfor %}
+  {%- if not e.childs|length %}
+   {%- if empty_element_closing_tag %}
+{{ block_separator *  depth ~ '<' ~ ([e.tagName] + e.attributes)|join(' ') ~ '></' ~ e.tagName ~ '>'  }}
+   {%- else %}
+{{ block_separator *  depth ~ '<' ~ ([e.tagName] + e.attributes)|join(' ') ~ ' />'  }}
+   {%- endif %}
+  {%- elif (e.childs|length == 1) and ((e.childs[0] is string) or (e.childs[0] is not sequence)) %}
+   {%- if e.childs[0] is boolean %}
+{{ block_separator *  depth ~ '<' ~ ([e.tagName] + e.attributes)|join(' ') ~ '>' ~ str_from_bool[e.childs[0]] ~ '</' ~ e.tagName ~ '>' }}
+   {%- else %}
+{{ block_separator *  depth ~ '<' ~ ([e.tagName] + e.attributes)|join(' ') ~ '>' ~ e.childs[0] ~ '</' ~ e.tagName ~ '>' }}
+   {%- endif %}
+  {%- else %}
+{{ block_separator *  depth ~ '<' ~ ([e.tagName] + e.attributes)|join(' ') ~ '>' }}
+   {%- for child in e.childs %}
+{{- xml_block(child, depth + 1) }}
+   {%- endfor %}
+{{ block_separator *  depth ~ '</' ~ e.tagName ~ '>' }}
+  {%- endif %}
+ {%- else %}
+{{ element }}
+ {%- endif %}
+{%- endmacro -%}
+<?xml version="1.0" encoding="UTF-8"?>
+{{ xml_block(root_element) }}

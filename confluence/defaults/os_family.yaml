@@ -1,0 +1,4 @@
+RedHat:
+  install_path: /opt/atlassian-confluence
+  confluence_home: /var/confluence
+  manage_service_start: false
